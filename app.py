@@ -15,6 +15,30 @@ class Piece():
         self.rect.x = x
         self.rect.y = y
 
+def text_objects(text, font):
+    textSurface = font.render(text, True, BLACK)
+    return textSurface, textSurface.get_rect()
+
+def button(msg,x,y,w,h,ic,ac,action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+    button_shade = pygame.Surface((w + 3, h + 3)).convert()
+    button_shade.fill(pygame.Color(105, 105, 105))
+    SCREEN.blit(button_shade, (x, y))
+    if x+w > mouse[0] > x and y+h > mouse[1] > y:
+        pygame.draw.rect(SCREEN, ac,(x,y,w,h))
+
+        if click[0] == 1 and action != None:
+            action()         
+    else:
+        pygame.draw.rect(SCREEN, ic,(x,y,w,h))
+
+    smallText = pygame.font.SysFont("Ubuntu",20)
+    textSurf, textRect = text_objects(msg, smallText)
+    textRect.center = ( (x+(w/2)), (y+(h/2)) )
+    SCREEN.blit(textSurf, textRect)
+
+
 def updateBoard():
     for square in chess.SQUARES:
         piece = str(BOARD.piece_at(square))
@@ -28,18 +52,50 @@ def updateBoard():
         if piece != "None":
             SCREEN.blit(piece_dict[piece], (x_cord  * 64, y_cord * 64))
 
+def resetBoard():
+    global move_array
+    BOARD.reset()
+    move_array = []
+
+def toBeginning():
+    global move_array
+    global TMP
+    while len(BOARD.move_stack) > 0:
+        TMP.append(BOARD.pop())
+    move_array = []
+
+def oneBack():
+    global move_array
+    global TMP
+    if len(BOARD.move_stack) > 0:
+        TMP.append(BOARD.pop())
+    move_array = []
+
+def pushOne():
+    if len(TMP) > 0:
+        BOARD.push(TMP.pop())
+
+def toEnd():
+    while len(TMP) > 0:
+        BOARD.push(TMP.pop())
+
 pygame.init()
 
 pygame.display.set_caption('PyChess')
-HEIGHT, WIDTH = 512, 512
+WIDTH, HEIGHT = 512, 570
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-SQUARE_LIGHT = pygame.Surface((64, 64))
-SQUARE_LIGHT.convert()
+SQUARE_LIGHT = pygame.Surface((64, 64)).convert()
 SQUARE_LIGHT.fill(pygame.Color("#E9E9E9"))
 SQUARE_DARK = pygame.Surface((64, 64)).convert()
 SQUARE_DARK.fill(pygame.Color("#6F83B5"))
 SQUARE_CLICKED = pygame.Surface((64, 64)).convert()
 SQUARE_CLICKED.fill(pygame.Color("#34F02E"))
+BACKGROUND = pygame.Surface((WIDTH, 512)).convert()
+BACKGROUND.fill(pygame.Color("#D3D3D3"))
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+BUTTON_BACK = (255, 222, 173)
 
 LIGHT_PAWN = Piece(64, 6*64, './images/Chess_tile_pl.png')
 DARK_PAWN = Piece(64, 6*64, './images/Chess_tile_pd.png')
@@ -56,20 +112,29 @@ D_KING = Piece(64, 6*64, './images/Chess_tile_kd.png')
 
 CLOCK = pygame.time.Clock()
 BOARD = chess.Board()
+move_array = []
+TMP = []
 
 def main():
-
-    move_array = []
+    global move_array
     game = True
 
     while game:
-        for x in range(8):
-            for y in range(8):
-                if (x, y) not in move_array:
-                    if (x + y) % 2 == 0:
-                        SCREEN.blit(SQUARE_DARK, (x * 64, y * 64))
+
+        SCREEN.blit(BACKGROUND, (0, 512))
+        button("Reset", 50, 520, 100, 30, BUTTON_BACK, BUTTON_BACK, resetBoard)
+        button("<<", 200, 520, 50, 30, BUTTON_BACK, BUTTON_BACK, toBeginning)
+        button("<", 270, 520, 50, 30, BUTTON_BACK, BUTTON_BACK, oneBack)
+        button(">", 340, 520, 50, 30, BUTTON_BACK, BUTTON_BACK, pushOne)
+        button(">>", 410, 520, 50, 30, BUTTON_BACK, BUTTON_BACK, toEnd)
+
+        for row in range(8):
+            for column in range(8):
+                if (row, column) not in move_array:
+                    if (row + column) % 2 == 0:
+                        SCREEN.blit(SQUARE_DARK, (row * 64, column * 64))
                     else:
-                        SCREEN.blit(SQUARE_LIGHT, (x * 64, y * 64))
+                        SCREEN.blit(SQUARE_LIGHT, (row * 64, column * 64))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -77,7 +142,8 @@ def main():
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
                 x_val, y_val = int(pos[0] / 64), 7 - (int(pos[1] / 64))
-                move_array.append((x_val, y_val))
+                if y_val >= 0:
+                    move_array.append((x_val, y_val))
 
         if len(move_array) == 1:
             SCREEN.blit(SQUARE_CLICKED, (move_array[0][0] * 64, (7 - move_array[0][1]) * 64))
@@ -97,6 +163,7 @@ def main():
                 BOARD.push(cur_move)
             else:
                 move_array = []
+
 
         updateBoard()
         pygame.display.flip()
