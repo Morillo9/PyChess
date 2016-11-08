@@ -5,6 +5,7 @@ Python Chess Client
 """
 
 import chess
+from chess import uci
 import pygame
 
 class Piece():
@@ -118,6 +119,8 @@ TMP = []
 def main():
     global move_array
     game = True
+    engine = uci.popen_engine('./Engine/stockfish_8_x64')
+    engine.uci()
 
     while game:
 
@@ -161,6 +164,9 @@ def main():
 
             if cur_move in BOARD.legal_moves:
                 BOARD.push(cur_move)
+                engine_position = engine.position(BOARD)
+                engine_moves = engine.go()
+                BOARD.push(engine_moves[0])
             else:
                 move_array = []
 
